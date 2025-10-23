@@ -1,5 +1,0 @@
-Model Download Instructions:
-The trained model required for this project is available at the link below.
-Please download the file and place it inside your project directory before running the application.
-
-Download link: https://drive.google.com/file/d/1nS2tP00AG-xI9siRYSnFGTK3-VeaDBgq/view?usp=sharing
