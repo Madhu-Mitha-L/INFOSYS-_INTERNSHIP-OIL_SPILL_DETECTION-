@@ -18,7 +18,9 @@ The objective of this project is to develop an **AI-powered oil spill detection 
 - [📌 Overview](#-overview)
 - [✨ Key Features](#-key-features)
 - [✨ Dataset](#-dataset)
+- [🛠️ Preprocessing & Segmentation](#-preprocessing-and-segmentation)
 - [🏗️ Model Architecture](#-model-architecture)
+- [⚙️ Model Compilation](#-model-compilation)
 - [💻 Installation](#-installation)
 - [🛠️ Required Libraries](#-required-libraries)
 - [🚀 Google Colab Setup](#-google-colab-setup)
@@ -42,6 +44,35 @@ The objective of this project is to develop an **AI-powered oil spill detection 
 - ✅ Visualizations: Heatmaps, overlays, histograms, pie charts.
 
 ---
+ ## 💻 Installation
+ ```bash
+ # Clone repository
+git clone <repo-url>
+
+# Navigate to project
+cd Oil_Spill_Detection
+
+# Install dependencies
+pip install -r requirements.txt
+```
+## 🔮 Required Libraries
+
+- Python 3.12
+- TensorFlow / Keras
+- NumPy, Pandas
+- Matplotlib, Seaborn
+- OpenCV
+- scikit-learn
+  
+## 🚀 Google Colab Setup
+```
+# Mount Google Drive
+from google.colab import drive
+drive.mount('/content/drive')
+
+# Change working directory
+%cd /content/drive/MyDrive/Oil_Spill_Detection
+```
 
 ## ✨ Dataset
 - 📦 **Train**: Images and corresponding masks for training.  
@@ -58,6 +89,51 @@ dataset/
 │   ├── images/
 │   └── masks/
 ```
+## 📌 Preprocessing and Segmentation
+
+Here we prepare satellite images and masks for training, ensuring clean and uniform data for the DeepAttention U-Net.
+
+### 🔹 Resizing & Augmentation
+- Resize images and masks to **256×256** pixels.  
+- Normalize images to [0–1] and binarize masks (oil spill = 1, background = 0).  
+- Apply **flipping, rotation, scaling, brightness/contrast** for dataset diversity.  
+- Maintain original copies for comparison and visualization.
+
+### 📌 Visualization
+- Display random images and masks side by side to verify preprocessing.  
+- Check alignment, binarization, and augmented samples before training.
+```
+def apply_augmentation(img, mask):
+    aug_img = img
+    aug_mask = mask
+
+    if tf.random.uniform(()) > 0.5:
+        aug_img = tf.image.flip_left_right(aug_img)
+        aug_mask = tf.image.flip_left_right(aug_mask)
+    if tf.random.uniform(()) > 0.5:
+        aug_img = tf.image.flip_up_down(aug_img)
+        aug_mask = tf.image.flip_up_down(aug_mask)
+
+    k = tf.random.uniform([], 0, 4, dtype=tf.int32)
+    aug_img = tf.image.rot90(aug_img, k)
+    aug_mask = tf.image.rot90(aug_mask, k)
+
+    aug_img = tf.image.random_brightness(aug_img, max_delta=0.15)
+    aug_img = tf.image.random_contrast(aug_img, lower=0.85, upper=1.15)
+
+    scale = tf.random.uniform([], 0.9, 1.1)
+    new_size = (int(IMG_SIZE[0]*scale), int(IMG_SIZE[1]*scale))
+    aug_img = tf.image.resize(aug_img, new_size)
+    aug_mask = tf.image.resize(aug_mask, new_size, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+    aug_img = tf.image.resize_with_crop_or_pad(aug_img, IMG_SIZE[0], IMG_SIZE[1])
+    aug_mask = tf.image.resize_with_crop_or_pad(aug_mask, IMG_SIZE[0], IMG_SIZE[1])
+
+    return aug_img, aug_mask
+```
+### Output for the reszing and augmentation
+<img width="1607" height="639" alt="image" src="https://github.com/user-attachments/assets/7ef164c7-136f-4dbb-9b1d-027d549e2f02" />
+
+
 ## 📌 Model Architecture
 - ⚙️ **Architecture**: Based on **U-Net** for segmentation tasks.  
 - 🔄 **Structure**: Encoder-decoder with skip connections for preserving spatial information.  
@@ -94,39 +170,54 @@ def unet_block(input_size=(128, 128, 1)):
 
 - 🧪 Output: Single-channel segmentation mask (oil spill regions).
 - 🏎️ Lightweight: Designed for faster inference on moderate hardware (GPU/TPU).
-
- ## 💻 Installation
- ```bash
- # Clone repository
-git clone <repo-url>
-
-# Navigate to project
-cd Oil_Spill_Detection
-
-# Install dependencies
-pip install -r requirements.txt
-```
-## 🔮 Required Libraries
-
-- Python 3.12
-- TensorFlow / Keras
-- NumPy, Pandas
-- Matplotlib, Seaborn
-- OpenCV
-- scikit-learn
   
-## 🚀 Google Colab Setup
-```
-# Mount Google Drive
-from google.colab import drive
-drive.mount('/content/drive')
+## 🎯 Model Compilation
 
-# Change working directory
-%cd /content/drive/MyDrive/Oil_Spill_Detection
+1️⃣ **Learning Rate Schedule**  
+- Type: `CosineDecay`  
+- Initial LR: `LEARNING_RATE` (e.g., 2e-4)  
+- Decay Steps: `EPOCHS * 100`  
+- Alpha: 0.1 (minimum LR factor at the end)  
+
+2️⃣ **Optimizer**  
+- Type: `Adam`  
+- Parameters: `beta_1=0.9, beta_2=0.999, epsilon=1e-7`  
+- Uses the cosine-decayed learning rate for smoother convergence.  
+
+3️⃣ **Compile**  
+- **Loss:** `combined_loss_improved` (BCE + Focal Tversky + Dice + Boundary)  
+- **Metrics:** `accuracy`, `dice_coef_improved`, `iou_improved`, `precision_improved`, `recall_improved`  
+
+✅ **Confirmation:** "Model compiled!"
+```# Learning rate schedule
+lr_schedule = tf.keras.optimizers.schedules.CosineDecay(
+    initial_learning_rate=LEARNING_RATE,
+    decay_steps=EPOCHS * 100,
+    alpha=0.1
+)
+
+# Optimizer
+optimizer = Adam(learning_rate=lr_schedule, beta_1=0.9, beta_2=0.999, epsilon=1e-7)
+
+# Compile
+model.compile(
+    optimizer=optimizer,
+    loss=combined_loss_improved,
+    metrics=[
+        'accuracy',
+        dice_coef_improved,
+        iou_improved,
+        precision_improved,
+        recall_improved
+    ]
+)
+
+print("✅ Model compiled!")
 ```
+ 
 ## 🎯 Training Configuration
 
-- Epochs: 50
+- Epochs: 25
 - Batch Size: 16
 - Input Size: 128x128 (or 256x256 depending on dataset)
 - Optimizer: Adam (learning_rate=0.001)
