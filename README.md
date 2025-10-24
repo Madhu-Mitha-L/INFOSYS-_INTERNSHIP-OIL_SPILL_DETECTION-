@@ -1,8 +1,16 @@
 # 🛢️ Oil Spill Detection Project
 
 ## 📌 Overview
-Detect and segment oil spill regions in satellite or SAR images using a lightweight deep learning model based on **U-Net**.  
-The project includes dataset preprocessing, model training, evaluation, and visualization of results.
+## Project Objective
+
+Oil spills pose a serious threat to marine ecosystems, coastal regions, and local economies. Traditional detection methods, such as manual inspection of satellite images or physical patrolling, are time-consuming, labor-intensive, and often delayed.
+
+The objective of this project is to develop an **AI-powered oil spill detection system** that leverages **machine learning and satellite imagery** to:
+
+- Efficiently and accurately identify and localize oil spills.  
+- Analyze satellite images using **deep learning models** such as **CNNs** or **U-Net** to detect oil spill patterns.  
+- Generate **segmentation maps** for real-time monitoring.  
+- Enable **early intervention**, reducing environmental damage and supporting emergency response efforts.
 
 ---
 
